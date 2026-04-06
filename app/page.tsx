@@ -1,81 +1,181 @@
-async function handleSendRequest() {
-  if (!selectedPrinter || !uploadedFile) {
-    showToast("Missing printer or file.");
-    return;
+"use client";
+
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+export default function HomePage() {
+  const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
+
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [requestNotes, setRequestNotes] = useState("");
+
+  const [requesting, setRequesting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  function showMessage(text: string) {
+    setMessage(text);
+    console.log(text);
   }
 
-  if (!customerName.trim() || !customerEmail.trim()) {
-    showToast("Enter your name and email.");
-    return;
+  function handleFileChange(file: File | null) {
+    if (!file) return;
+    setUploadedFile(file);
+    setFileName(file.name);
   }
 
-  try {
-    setRequesting(true);
-
-    const payload = {
-      printer_id: selectedPrinter.id,
-      printer_email: selectedPrinter.email || null,
-      customer_name: customerName.trim(),
-      customer_email: customerEmail.trim(),
-      file_name: fileName,
-      notes: requestNotes.trim() || null,
-      status: "pending",
-    };
-
-    const { data, error } = await supabase
-      .from("requests")
-      .insert(payload)
-      .select();
-
-    if (error) {
-      console.error("Error creating request:", error);
-      showToast(error.message || "Could not send request.");
+  async function handleSendRequest() {
+    if (!selectedPrinter || !uploadedFile) {
+      showMessage("Missing printer or file.");
       return;
     }
 
-    console.log("Request created:", data);
-
-    // 🔥 EMAIL DEBUG BLOCK (THIS IS WHAT YOU WERE MISSING)
-    try {
-      const emailRes = await fetch("/api/notify/new-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          printerEmail: selectedPrinter.email,
-          printerName: selectedPrinter.name,
-          customerName: customerName.trim(),
-          customerEmail: customerEmail.trim(),
-          fileName,
-          notes: requestNotes.trim() || "",
-        }),
-      });
-
-      const emailJson = await emailRes.json().catch(() => null);
-
-      if (!emailRes.ok) {
-        console.error("❌ Email API failed:", emailJson);
-        showToast(emailJson?.error || "Request saved, but email failed.");
-      } else {
-        console.log("✅ Email API success:", emailJson);
-      }
-    } catch (emailErr) {
-      console.error("❌ Email request crashed:", emailErr);
-      showToast("Request saved, but email failed.");
+    if (!customerName.trim() || !customerEmail.trim()) {
+      showMessage("Enter your name and email.");
+      return;
     }
 
-    setShowRequestModal(false);
-    setCustomerName("");
-    setCustomerEmail("");
-    setRequestNotes("");
-    setSelectedPrinter(null);
+    try {
+      setRequesting(true);
 
-    showToast("Request sent successfully.");
-  } catch (err: any) {
-    console.error("Unexpected request error:", err);
-    showToast(err?.message || "Something went wrong.");
-  } finally {
-    setRequesting(false);
+      const payload = {
+        printer_id: selectedPrinter.id,
+        printer_email: selectedPrinter.email || null,
+        customer_name: customerName.trim(),
+        customer_email: customerEmail.trim(),
+        file_name: fileName,
+        notes: requestNotes.trim() || null,
+        status: "pending",
+      };
+
+      const { data, error } = await supabase
+        .from("requests")
+        .insert(payload)
+        .select();
+
+      if (error) {
+        console.error("Error creating request:", error);
+        showMessage(error.message || "Could not send request.");
+        return;
+      }
+
+      console.log("Request created:", data);
+
+      try {
+        const emailRes = await fetch("/api/notify/new-request", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            printerEmail: selectedPrinter.email,
+            printerName: selectedPrinter.name,
+            customerName: customerName.trim(),
+            customerEmail: customerEmail.trim(),
+            fileName,
+            notes: requestNotes.trim() || "",
+          }),
+        });
+
+        const emailJson = await emailRes.json().catch(() => null);
+
+        if (!emailRes.ok) {
+          console.error("Email API failed:", emailJson);
+          showMessage(emailJson?.error || "Request saved, but email failed.");
+        } else {
+          console.log("Email API success:", emailJson);
+          showMessage("Request + email sent.");
+        }
+      } catch (emailErr) {
+        console.error("Email request crashed:", emailErr);
+        showMessage("Request saved, but email request crashed.");
+      }
+    } catch (err: any) {
+      console.error("Unexpected request error:", err);
+      showMessage(err?.message || "Something went wrong.");
+    } finally {
+      setRequesting(false);
+    }
   }
+
+  return (
+    <main style={{ padding: "40px", fontFamily: "Arial, sans-serif" }}>
+      <h1>Email Debug Page</h1>
+
+      <p style={{ marginTop: "16px" }}>
+        Use this temporary page to test whether the request saves and whether the
+        email API works.
+      </p>
+
+      <div style={{ marginTop: "24px" }}>
+        <input
+          type="file"
+          onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+        />
+      </div>
+
+      <div style={{ marginTop: "16px" }}>
+        <input
+          type="text"
+          placeholder="Your name"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          style={{ width: "320px", padding: "10px" }}
+        />
+      </div>
+
+      <div style={{ marginTop: "16px" }}>
+        <input
+          type="email"
+          placeholder="Your email"
+          value={customerEmail}
+          onChange={(e) => setCustomerEmail(e.target.value)}
+          style={{ width: "320px", padding: "10px" }}
+        />
+      </div>
+
+      <div style={{ marginTop: "16px" }}>
+        <textarea
+          placeholder="Notes"
+          value={requestNotes}
+          onChange={(e) => setRequestNotes(e.target.value)}
+          rows={4}
+          style={{ width: "320px", padding: "10px" }}
+        />
+      </div>
+
+      <div style={{ marginTop: "16px" }}>
+        <button
+          type="button"
+          onClick={() =>
+            setSelectedPrinter({
+              id: 1,
+              name: "Test Printer",
+              email: customerEmail,
+            })
+          }
+          style={{ padding: "10px 16px", marginRight: "12px" }}
+        >
+          Select Test Printer
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSendRequest}
+          disabled={requesting}
+          style={{ padding: "10px 16px" }}
+        >
+          {requesting ? "Sending..." : "Send Request"}
+        </button>
+      </div>
+
+      <div style={{ marginTop: "24px", fontWeight: 700 }}>
+        {fileName ? `File: ${fileName}` : "No file selected"}
+      </div>
+
+      <div style={{ marginTop: "16px", color: "#cc0000" }}>{message}</div>
+    </main>
+  );
 }
