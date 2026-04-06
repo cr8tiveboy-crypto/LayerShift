@@ -4,7 +4,12 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
-  const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
+  const [selectedPrinter, setSelectedPrinter] = useState<{
+    id: number;
+    name: string;
+    email: string;
+  } | null>(null);
+
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
 
@@ -24,11 +29,33 @@ export default function HomePage() {
     if (!file) return;
     setUploadedFile(file);
     setFileName(file.name);
+    showMessage(`File selected: ${file.name}`);
+  }
+
+  function handleSelectPrinter() {
+    if (!customerEmail.trim()) {
+      showMessage("Enter your email first, then click Select Test Printer.");
+      return;
+    }
+
+    const printer = {
+      id: 1,
+      name: "Test Printer",
+      email: customerEmail.trim(),
+    };
+
+    setSelectedPrinter(printer);
+    showMessage(`Selected printer: ${printer.name} (${printer.email})`);
   }
 
   async function handleSendRequest() {
-    if (!selectedPrinter || !uploadedFile) {
-      showMessage("Missing printer or file.");
+    if (!selectedPrinter) {
+      showMessage("Select the test printer first.");
+      return;
+    }
+
+    if (!uploadedFile) {
+      showMessage("Upload a file first.");
       return;
     }
 
@@ -105,8 +132,7 @@ export default function HomePage() {
       <h1>Email Debug Page</h1>
 
       <p style={{ marginTop: "16px" }}>
-        Use this temporary page to test whether the request saves and whether the
-        email API works.
+        Temporary test page to verify request save + email notification.
       </p>
 
       <div style={{ marginTop: "24px" }}>
@@ -149,13 +175,7 @@ export default function HomePage() {
       <div style={{ marginTop: "16px" }}>
         <button
           type="button"
-          onClick={() =>
-            setSelectedPrinter({
-              id: 1,
-              name: "Test Printer",
-              email: customerEmail,
-            })
-          }
+          onClick={handleSelectPrinter}
           style={{ padding: "10px 16px", marginRight: "12px" }}
         >
           Select Test Printer
@@ -173,6 +193,12 @@ export default function HomePage() {
 
       <div style={{ marginTop: "24px", fontWeight: 700 }}>
         {fileName ? `File: ${fileName}` : "No file selected"}
+      </div>
+
+      <div style={{ marginTop: "12px", fontWeight: 700 }}>
+        {selectedPrinter
+          ? `Selected printer: ${selectedPrinter.name} (${selectedPrinter.email})`
+          : "No printer selected"}
       </div>
 
       <div style={{ marginTop: "16px", color: "#cc0000" }}>{message}</div>
