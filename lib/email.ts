@@ -1,6 +1,14 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing RESEND_API_KEY");
+  }
+
+  return new Resend(apiKey);
+}
 
 type PrinterRequestEmailArgs = {
   printerEmail: string;
@@ -22,6 +30,8 @@ export async function sendPrinterRequestEmail({
   if (!printerEmail) {
     throw new Error("Printer email is missing.");
   }
+
+  const resend = getResend();
 
   const safePrinterName = printerName?.trim() || "Printer";
   const safeNotes = notes?.trim() || "No notes provided.";
@@ -95,6 +105,12 @@ export async function sendCustomerConfirmationEmail({
   fileName: string;
   printerName?: string | null;
 }) {
+  if (!customerEmail) {
+    throw new Error("Customer email is missing.");
+  }
+
+  const resend = getResend();
+
   const safePrinterName = printerName?.trim() || "a local printer";
 
   const { data, error } = await resend.emails.send({
