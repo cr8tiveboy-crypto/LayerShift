@@ -1,296 +1,165 @@
-"use client";
-
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 
 export default function BecomePrinterPage() {
-  const [step, setStep] = useState(0);
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [shopName, setShopName] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [materials, setMaterials] = useState<string[]>(["PLA"]);
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [isAuthing, setIsAuthing] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const toggleMaterial = (mat: string) => {
-    setMaterials((prev) =>
-      prev.includes(mat) ? prev.filter((m) => m !== mat) : [...prev, mat]
-    );
-  };
-
-  const normalizedPostal = postalCode.replace(/\s+/g, "").toUpperCase().slice(0, 3);
-  const canContinueAuth = email.trim().length > 3 && password.trim().length >= 6;
-  const canContinueSetup = shopName.trim().length > 1 && normalizedPostal.length >= 3;
-  const canActivate = canContinueSetup && materials.length > 0 && !isSaving;
-
-  const handleAuth = async () => {
-    if (!canContinueAuth) {
-      setMessage("Enter a valid email and a password with at least 6 characters.");
-      return;
-    }
-
-    setIsAuthing(true);
-    setMessage("");
-
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-
-      if (signInError) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-        });
-
-        if (signUpError) {
-          throw signUpError;
-        }
-
-        if (!signUpData.user) {
-          throw new Error("Could not create account.");
-        }
-
-        const { error: retrySignInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-
-        if (retrySignInError) {
-          throw retrySignInError;
-        }
-      }
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-      if (!session?.user) throw new Error("Auth session missing");
-
-      setStep(1);
-    } catch (e: any) {
-      setMessage(e?.message || "Could not continue.");
-    } finally {
-      setIsAuthing(false);
-    }
-  };
-
-  const activate = async () => {
-    if (!canActivate) return;
-
-    setIsSaving(true);
-    setMessage("");
-
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-      if (!session?.user) throw new Error("Auth session missing");
-
-      const user = session.user;
-
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: user.id,
-        role: "printer",
-      });
-
-      if (profileError) throw profileError;
-
-      const payload = {
-        user_id: user.id,
-        name: shopName.trim(),
-        postal_code: normalizedPostal,
-        materials,
-        jobs_completed: 0,
-        active: true,
-      };
-
-      const { data: existing, error: existingError } = await supabase
-        .from("printers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingError) throw existingError;
-
-      if (existing?.id) {
-        const { error: updateError } = await supabase
-          .from("printers")
-          .update(payload)
-          .eq("id", existing.id);
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase.from("printers").insert(payload);
-
-        if (insertError) throw insertError;
-      }
-
-      setMessage("You're live. Redirecting...");
-
-      window.setTimeout(() => {
-        window.location.href = "/printer";
-      }, 500);
-    } catch (e: any) {
-      setMessage(e?.message || "Something went wrong.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <main className="min-h-screen bg-black text-white">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0d0d0d]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-10 md:py-12">
           <a href="/" className="flex items-center">
             <Image
               src="/logo.svg"
               alt="LayerShift"
-              width={180}
-              height={50}
+              width={220}
+              height={60}
               priority
-              className="h-10 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </a>
+
+          <nav className="hidden items-center gap-6 md:flex">
+            <a href="/" className="text-sm text-white/80 hover:text-white">
+              Home
+            </a>
+            <a href="/#how-it-works" className="text-sm text-white/80 hover:text-white">
+              How it works
+            </a>
+            <a
+              href="/"
+              className="rounded-full bg-orange-500 px-5 py-2 text-sm font-bold text-black transition hover:opacity-90"
+            >
+              Back to Home
+            </a>
+          </nav>
         </div>
       </header>
 
-      <div className="flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-xl">
-          {step === 0 && (
-            <>
-              <h1 className="text-4xl font-bold">Create your account</h1>
-              <p className="mt-3 text-gray-400">
-                Sign in or create an account to activate your printer listing.
-              </p>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,115,0,0.18),transparent_35%)]" />
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-20 md:py-28">
+          <div className="max-w-4xl">
+            <div className="mb-5 inline-block rounded-full border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-sm font-semibold text-orange-300">
+              Join the LayerShift network
+            </div>
 
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-6 w-full rounded-xl border border-white/20 bg-black p-3 outline-none"
-              />
+            <h1 className="text-4xl font-black leading-tight md:text-6xl">
+              Turn your printer into a <span className="text-orange-500">local business.</span>
+            </h1>
 
-              <div className="relative mt-4">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-white/20 bg-black p-3 pr-14 outline-none"
-                />
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75">
+              LayerShift helps local makers get discovered by customers nearby.
+              Apply to become a printer and start receiving jobs in your area.
+            </p>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white/60 hover:text-white"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              <button
-                disabled={!canContinueAuth || isAuthing}
-                onClick={handleAuth}
-                className="mt-6 w-full rounded-xl bg-orange-500 py-3 text-black disabled:opacity-50"
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <a
+                href="https://forms.gle/hHbkKARWYsFz6Vm97"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-2xl bg-orange-500 px-6 py-4 font-bold text-black transition hover:opacity-90"
               >
-                {isAuthing ? "Continuing..." : "Continue"}
-              </button>
+                Apply Now
+              </a>
 
-              {message && <p className="mt-3 text-orange-400">{message}</p>}
-            </>
-          )}
-
-          {step === 1 && (
-            <>
-              <h1 className="text-4xl font-bold">Your setup</h1>
-              <p className="mt-3 text-gray-400">
-                Finish this in 60 seconds and start receiving local requests.
-              </p>
-
-              <input
-                placeholder="Printer / Shop Name"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                className="mt-6 w-full rounded-xl border border-white/20 bg-black p-3 outline-none"
-              />
-
-              <input
-                placeholder="Postal Code"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                className="mt-4 w-full rounded-xl border border-white/20 bg-black p-3 outline-none"
-              />
-
-              <button
-                disabled={!canContinueSetup}
-                onClick={() => setStep(2)}
-                className="mt-6 w-full rounded-xl bg-orange-500 py-3 text-black disabled:opacity-50"
+              <a
+                href="/"
+                className="rounded-2xl border border-white/20 px-6 py-4 font-bold text-white transition hover:bg-white/5"
               >
-                Continue
-              </button>
-
-              {message && <p className="mt-3 text-orange-400">{message}</p>}
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <h1 className="text-4xl font-bold">Materials</h1>
-              <p className="mt-3 text-gray-400">What materials can you print?</p>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                {["PLA", "PETG", "ABS", "TPU"].map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => toggleMaterial(m)}
-                    className={`rounded-full px-4 py-2 ${
-                      materials.includes(m)
-                        ? "bg-orange-500 text-black"
-                        : "border border-white/20 text-white"
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-
-              <p className="mt-4 text-sm text-gray-500">
-                You can edit everything later. This just gets you live.
-              </p>
-
-              <button
-                disabled={!canActivate}
-                onClick={activate}
-                className="mt-6 w-full rounded-xl bg-orange-500 py-3 text-black disabled:opacity-50"
-              >
-                {isSaving ? "Starting..." : "Start Receiving Jobs"}
-              </button>
-
-              {message && <p className="mt-3 text-orange-400">{message}</p>}
-            </>
-          )}
+                Back to Home
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <footer className="border-t border-white/10 p-6 text-center text-white/50">
-        © 2026 LayerShift
+      <section className="bg-black">
+        <div className="mx-auto max-w-7xl px-6 py-12">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="mb-3 text-sm font-bold text-orange-400">01</div>
+              <h2 className="text-xl font-semibold">Create your profile</h2>
+              <p className="mt-3 text-sm leading-7 text-white/65">
+                Tell us about your printer, materials, turnaround time, and service area.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="mb-3 text-sm font-bold text-orange-400">02</div>
+              <h2 className="text-xl font-semibold">Get approved</h2>
+              <p className="mt-3 text-sm leading-7 text-white/65">
+                We review applications to keep the network reliable and customer-friendly.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="mb-3 text-sm font-bold text-orange-400">03</div>
+              <h2 className="text-xl font-semibold">Receive local jobs</h2>
+              <p className="mt-3 text-sm leading-7 text-white/65">
+                Once approved, customers in your area can send requests directly to you.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-[#0d0d0d]">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-3">
+          <div>
+            <Image
+              src="/logo.svg"
+              alt="LayerShift"
+              width={160}
+              height={40}
+              className="mb-4 h-auto w-auto"
+            />
+            <p className="max-w-xs text-sm text-white/60">
+              LayerShift connects local customers and nearby 3D printers.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="mb-4 text-sm font-semibold text-white">Platform</h4>
+            <ul className="space-y-2 text-sm text-white/60">
+              <li>
+                <a href="/" className="hover:text-white">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="/#find-printer" className="hover:text-white">
+                  Find printers
+                </a>
+              </li>
+              <li>
+                <a href="https://forms.gle/hHbkKARWYsFz6Vm97" target="_blank" rel="noreferrer" className="hover:text-white">
+                  Printer application
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-4 text-sm font-semibold text-white">Apply</h4>
+            <p className="mb-4 text-sm text-white/60">
+              Ready to join the network and start taking local requests?
+            </p>
+            <a
+              href="https://forms.gle/hHbkKARWYsFz6Vm97"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block rounded-full bg-orange-500 px-5 py-3 text-sm font-bold text-black transition hover:opacity-90"
+            >
+              Become a Printer
+            </a>
+          </div>
+        </div>
+
+        <div className="border-t border-white/10">
+          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-6 py-6 text-sm text-white/50 md:flex-row">
+            <div>© 2026 LayerShift</div>
+            <div>Local 3D printing marketplace. Availability may vary by region.</div>
+          </div>
+        </div>
       </footer>
-    </div>
+    </main>
   );
 }
