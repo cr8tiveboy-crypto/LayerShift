@@ -10,7 +10,7 @@ function getResend() {
   return new Resend(apiKey);
 }
 
-const TEST_EMAIL = "din.lad@live.ca"; // 🔥 force all emails here for testing
+const TEST_EMAIL = "din.lad@live.ca"; // force all emails here for testing
 
 type PrinterRequestEmailArgs = {
   printerEmail: string;
@@ -36,7 +36,7 @@ export async function sendPrinterRequestEmail({
 
   const { data, error } = await resend.emails.send({
     from: "LayerShift <onboarding@resend.dev>",
-    to: [TEST_EMAIL], // 🔥 forced
+    to: [TEST_EMAIL],
     subject: `New print request from ${customerName}`,
     html: `
       <div style="margin:0;padding:0;background:#111111;font-family:Arial,Helvetica,sans-serif;">
@@ -68,7 +68,8 @@ export async function sendPrinterRequestEmail({
   });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("❌ RESEND ERROR FULL:", error);
+    throw new Error(JSON.stringify(error));
   }
 
   return data;
@@ -91,7 +92,7 @@ export async function sendCustomerConfirmationEmail({
 
   const { data, error } = await resend.emails.send({
     from: "LayerShift <onboarding@resend.dev>",
-    to: [TEST_EMAIL], // 🔥 forced
+    to: [TEST_EMAIL],
     subject: "Your LayerShift request was sent",
     html: `
       <div style="padding:20px;background:#111;color:#fff;">
@@ -103,7 +104,8 @@ export async function sendCustomerConfirmationEmail({
   });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("❌ RESEND ERROR FULL:", error);
+    throw new Error(JSON.stringify(error));
   }
 
   return data;
