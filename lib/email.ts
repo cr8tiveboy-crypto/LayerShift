@@ -10,8 +10,6 @@ function getResend() {
   return new Resend(apiKey);
 }
 
-const TEST_EMAIL = "din.lad@live.ca"; // force all emails here for testing
-
 type PrinterRequestEmailArgs = {
   printerEmail: string;
   printerName?: string | null;
@@ -35,8 +33,8 @@ export async function sendPrinterRequestEmail({
   const safeNotes = notes?.trim() || "No notes provided.";
 
   const { data, error } = await resend.emails.send({
-    from: "LayerShift <onboarding@resend.dev>",
-    to: [TEST_EMAIL],
+    from: "LayerShift <hello@layershift.ca>",
+    to: [printerEmail],
     subject: `New print request from ${customerName}`,
     html: `
       <div style="margin:0;padding:0;background:#111111;font-family:Arial,Helvetica,sans-serif;">
@@ -91,8 +89,8 @@ export async function sendCustomerConfirmationEmail({
   const safePrinterName = printerName?.trim() || "a local printer";
 
   const { data, error } = await resend.emails.send({
-    from: "LayerShift <onboarding@resend.dev>",
-    to: [TEST_EMAIL],
+    from: "LayerShift <hello@layershift.ca>",
+    to: [customerEmail],
     subject: "Your LayerShift request was sent",
     html: `
       <div style="padding:20px;background:#111;color:#fff;">
