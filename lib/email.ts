@@ -3,7 +3,7 @@ import { Resend } from "resend";
 const BRAND_NAME = "LayerShift";
 const FROM_EMAIL = "LayerShift <hello@layershift.ca>";
 const LOGO_URL = "https://layershift.ca/logo-email.png";
-const DEFAULT_REQUEST_LINK = "https://layershift.ca";
+const DEFAULT_SIGN_IN_LINK = "https://layershift.ca/auth";
 
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -127,7 +127,7 @@ export async function sendPrinterRequestEmail({
   material,
   quantity,
   notes,
-  dashboardLink = DEFAULT_REQUEST_LINK,
+  dashboardLink = DEFAULT_SIGN_IN_LINK,
 }: PrinterRequestEmailArgs) {
   const resend = getResend();
 
@@ -163,7 +163,7 @@ export async function sendPrinterRequestEmail({
         Customers usually move fast. A quick response improves your chances of winning the job.
       </p>
     `,
-    ctaLabel: "Open Dashboard",
+    ctaLabel: "Sign In to Open Dashboard",
     ctaHref: dashboardLink,
     footer: "LayerShift • Local print jobs delivered to your inbox",
   });
@@ -190,7 +190,7 @@ export async function sendCustomerConfirmationEmail({
   printerName,
   material,
   quantity,
-  requestLink = DEFAULT_REQUEST_LINK,
+  requestLink = DEFAULT_SIGN_IN_LINK,
 }: {
   customerName: string;
   customerEmail: string;
@@ -238,7 +238,7 @@ export async function sendCustomerConfirmationEmail({
         If you have any questions, just reply to this email.
       </p>
     `,
-    ctaLabel: "View Request",
+    ctaLabel: "Sign In to View Request",
     ctaHref: requestLink,
     footer: "LayerShift • Connecting customers with local 3D printers",
   });
@@ -261,7 +261,7 @@ export async function sendCustomerConfirmationEmail({
 export async function sendCustomerAcceptedEmail({
   customerName,
   customerEmail,
-  requestLink = DEFAULT_REQUEST_LINK,
+  requestLink = DEFAULT_SIGN_IN_LINK,
 }: {
   customerName: string;
   customerEmail: string;
@@ -306,7 +306,7 @@ export async function sendCustomerCompletedEmail({
   customerName,
   customerEmail,
   fulfillmentMethod,
-  requestLink = DEFAULT_REQUEST_LINK,
+  requestLink = DEFAULT_SIGN_IN_LINK,
 }: {
   customerName: string;
   customerEmail: string;
